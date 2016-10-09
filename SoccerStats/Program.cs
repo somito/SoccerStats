@@ -12,7 +12,7 @@ namespace SoccerStats
     {
         static void Main(string[] args)
         {
-            string currentDirectory = ("Z:\\Projects\\SoccerStats\\SoccerStats");
+            string currentDirectory = Directory.GetCurrentDirectory();
             DirectoryInfo directory = new DirectoryInfo(currentDirectory);
             var fileName = Path.Combine(directory.FullName, "SoccerGameResults.csv");
             var fileContents = ReadSoccerResults(fileName);
@@ -21,7 +21,7 @@ namespace SoccerStats
 
             foreach (var player in players)
             {
-                Console.WriteLine(player.second_name);
+                Console.WriteLine(player.FirstName);
             }
 
         }
