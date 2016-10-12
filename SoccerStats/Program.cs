@@ -23,9 +23,25 @@ namespace SoccerStats
             foreach (var player in topTenPlayers)
             {
                 List<NewsResult> newsResults = GetNewsForPlayer(string.Format("{0} {1}", player.FirstName, player.LastName));
+                SentimentResponse sentimentResponse = GetSentimentResponse(newsResults);
+                foreach (var sentiment in sentimentResponse.Sentiments)
+                {
+                    foreach (var newsResult in newsResults)
+                    {
+                        if (newsResult.HeadLine == sentiment.Id)
+                        {
+                            double score;
+                            if (double.TryParse(sentiment.Score, out score))
+                            {
+                                newsResult.SentimentScore = score;
+                            }
+                            break;
+                        }
+                    }
+                }
                 foreach (var result in newsResults)
                 {
-                    Console.WriteLine(string.Format("Date: {0:f}, Headline: {1}, Summary: {2} \r\n", result.DatePublished, result.HeadLine, result.Summary));
+                    Console.WriteLine(string.Format("Sentiment Score: {0:P} Date: {1:f}, Headline: {2}, Summary: {3} \r\n", result.SentimentScore, result.DatePublished, result.HeadLine, result.Summary));
                     Console.ReadKey();
                 }
             }
@@ -169,6 +185,29 @@ namespace SoccerStats
                 results = serializer.Deserialize<NewsSearch>(jsonReader).NewsResults;
             }
             return results;
+        }
+
+        public static SentimentResponse GetSentimentResponse(List<NewsResult> newsResults)
+        {
+            var sentimentResponse = new SentimentResponse();
+            var sentimentRequest = new SentimentRequest();
+            sentimentRequest.Documents = new List<Document>();
+            foreach (var result in newsResults)
+            {
+                sentimentRequest.Documents.Add(new Document { Id = result.HeadLine, Text = result.Summary });
+            }
+
+            var results = new List<NewsResult>();
+            var webClient = new WebClient();
+            webClient.Headers.Add("Ocp-Apim-Subscription-Key", "ca75435e155d4c799da31104e3450f87");
+            webClient.Headers.Add(HttpRequestHeader.Accept, "application/json");
+            webClient.Headers.Add(HttpRequestHeader.ContentType, "application/json");
+            string requestJson = JsonConvert.SerializeObject(sentimentRequest);
+            byte[] requestBytes = Encoding.UTF8.GetBytes(requestJson);
+            byte[] response = webClient.UploadData("https://westus.api.cognitive.microsoft.com/text/analytics/v2.0/sentiment", requestBytes);
+            string sentiments = Encoding.UTF8.GetString(response);
+            sentimentResponse = JsonConvert.DeserializeObject<SentimentResponse>(sentiments);
+            return sentimentResponse;
         }
     }
 }
